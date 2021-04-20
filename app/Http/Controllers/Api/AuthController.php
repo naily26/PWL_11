@@ -4,6 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Models\User;
+use App\Traits\ApiResponse;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -29,7 +37,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request){
         $validated = $request->validated();
 
-        if (Auth::attempt($validated)) {
+        if (!Auth::attempt($validated)) {
             return $this->apiError('Credentials not match', Resnponse::HTTP_UNAUTHORIZED);
         }
         $user = User::where('email', $validated['email'])->first();
@@ -40,5 +48,18 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => $user,
         ]);
+    }
+
+    public function logout()
+    {
+        try {
+            auth()->user()->tokens()->delete();
+            return $this->apiSuccess('Tokens revoked');
+        } catch (\Throwable $e) {
+            throw new HttpResponseException($this->apiError(
+                null,
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+            ));
+        }
     }
 }
